@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31410.357
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Freya", "Template\Freya.csproj", "{002754CB-D182-436F-9B1E-1E247BCAA329}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Freya.Infrastructure", "Infrastructure\Freya.Infrastructure.csproj", "{5A4CA970-0F74-488E-A8E1-68CCD92749FF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{002754CB-D182-436F-9B1E-1E247BCAA329}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{002754CB-D182-436F-9B1E-1E247BCAA329}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{002754CB-D182-436F-9B1E-1E247BCAA329}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{002754CB-D182-436F-9B1E-1E247BCAA329}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A4CA970-0F74-488E-A8E1-68CCD92749FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A4CA970-0F74-488E-A8E1-68CCD92749FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A4CA970-0F74-488E-A8E1-68CCD92749FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A4CA970-0F74-488E-A8E1-68CCD92749FF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B0251B8C-E5BE-44F5-87D3-FB74F90F8C54}
+	EndGlobalSection
+EndGlobal
