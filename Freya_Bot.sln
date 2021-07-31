@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31410.357
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31521.260
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Freya", "Template\Freya.csproj", "{002754CB-D182-436F-9B1E-1E247BCAA329}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Freya.Main", "Freya.Main\Freya.Main.csproj", "{002754CB-D182-436F-9B1E-1E247BCAA329}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Freya.Infrastructure", "Infrastructure\Freya.Infrastructure.csproj", "{5A4CA970-0F74-488E-A8E1-68CCD92749FF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Freya.Infrastructure", "Freya.Infrastructure\Freya.Infrastructure.csproj", "{5A4CA970-0F74-488E-A8E1-68CCD92749FF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
