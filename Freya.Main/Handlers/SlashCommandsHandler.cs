@@ -32,7 +32,7 @@ namespace Freya.Handler
             if (arg is not SocketSlashCommand command) return;
             if (!(command.User as SocketGuildUser).Roles.Any(r => _roles.Any(s => r.Id == s))) return;
             var eventer = await Eventer.GetOrCreate(command.User.Id);
-            await command.AcknowledgeAsync();
+            await command.DeferAsync();
             switch (command.Data.Name)
             {
                 case "profile":
@@ -55,14 +55,96 @@ namespace Freya.Handler
                 case "startevent":
                     await HandleStartEventCommand(command, eventer);
                     break;
+                case "transferevent":
+                    await HandleTransferEventCommand(command, eventer);
+                    break;
             }
         }
 
-        private async Task HandleStartEventCommand(SocketSlashCommand command, Eventer eventer)
+        private static async Task HandleTransferEventCommand(SocketSlashCommand command, Eventer eventer)
+        {
+            var options = command.Data.Options.ToArray();
+            var Target = (IGuildUser)options[0].Value;
+#pragma warning disable CS0183 // 'is' expression's given expression is always of the provided type
+            var EventGoing = eventer.Events.First(x => !x.Finished && x.Messages is not null && x.Messages.ManageMessageID is ulong);
+#pragma warning restore CS0183 // 'is' expression's given expression is always of the provided type
+
+            if (EventGoing is null)
+            {
+                await SendError(command, "У вас нет активных ивентов");
+                return;
+            }
+
+            if (Target is null || !Target.RoleIds.Contains(StaticVars.PhoenixRole))
+            {
+                await SendError(command, "Данный участник не является ивентером");
+                return;
+            }
+
+            var TargetEventer = await Eventer.GetOrCreate(Target.Id);
+            TargetEventer.Events.Add(EventGoing);
+            eventer.Events.Remove(EventGoing);
+
+            var SettingsChannel = Client.GetMainGuild().GetTextChannel(EventGoing.Channels.SettingsChannelID);
+            var SettingsMessage = await GetMessage(SettingsChannel, EventGoing.Messages.ManageMessageID);
+
+            var eventID = EventGoing.ID;
+            var ManageEvent = new ComponentBuilder()
+            .WithButton(new ButtonBuilder()
+            {
+                CustomId = $"SendNews-{eventID}",
+                Style = ButtonStyle.Primary,
+                Label = "Отправить Анонс?"
+            })
+            .WithButton(new ButtonBuilder()
+            {
+                CustomId = $"CloseChat-{eventID}",
+                Style = ButtonStyle.Secondary,
+                Label = "Закрыть чат?",
+            })
+            .WithButton(new ButtonBuilder()
+            {
+                CustomId = $"CloseVoice-{eventID}",
+                Style = ButtonStyle.Secondary,
+                Label = "Закрыть войс?"
+            })
+            .WithButton(new ButtonBuilder()
+            {
+                CustomId = $"EndEvent-{eventID}",
+                Style = ButtonStyle.Danger,
+                Label = "Закончить ивент"
+            });
+            var category = await EventType.FindOne(x => x.ID == EventGoing.EventCategoryID);
+            var EventName = category.EventInfos.Find(x => x.ID == EventGoing.EventTypeID);
+            CustomEmbedBuilder EventEmbed = new()
+            {
+                Title = $"Информация о столе",
+                ThumbnailUrl = Target.GetAvatarUrl(),
+                ImageUrl = "https://cdn.discordapp.com/attachments/847851000815681536/868820301939638292/rY0VuT6.gif",
+                Description = $"<:circle:855370914841231371>**Категория: {category.Category}**\n<:circle:855370914841231371>**Ивент: {EventName.Name}** \n<:circle:855370993433444383>**Время проведения: {EventGoing.Time.StartTime:M/d/yyyy HH:mm} **\n<a:circle:847956594725486624>**Канал управления ─ <#{EventGoing.Channels.SettingsChannelID}>**\n<a:circle:847956594725486624>**Голосовой канал ─ <#{EventGoing.Channels.VoiceChannelID}>**\n<a:circle:847956594725486624>**Ивентер ─ <@{Target.Id}>**",
+            };
+
+            await Task.WhenAll(
+                eventer.Save(),
+                TargetEventer.Save(),
+                SettingsChannel.RemovePermissionOverwriteAsync(command.User),
+                SettingsChannel.AddPermissionOverwriteAsync(Target, new(viewChannel: PermValue.Allow)),
+                SettingsChannel.SendMessageAsync(embed: EventEmbed.Build(), component: ManageEvent.Build()),
+                SettingsMessage.DeleteAsync(),
+                command.Respond($"Вы успешно передали ивент {Target}"));
+        }
+
+        private static async Task<IMessage> GetMessage(SocketTextChannel SettingsChannel, ulong MessageID)
+        {
+            var message = SettingsChannel.CachedMessages.FirstOrDefault(x => x.Id == MessageID);
+            return message ?? (await SettingsChannel.GetMessageAsync(MessageID));
+        }
+        private static async Task HandleStartEventCommand(SocketSlashCommand command, Eventer eventer)
         {
             IEvent NewEvent = new()
             {
                 Channels = new(),
+                Messages = new(),
                 EventReport = new(),
                 Time = new()
                 {
@@ -121,7 +203,7 @@ namespace Freya.Handler
         /// <param name="command"></param>
         /// <param name="eventer"></param>
         /// <returns></returns>
-        private async Task HandleRequestCommand(SocketSlashCommand command, Eventer eventer)
+        private static async Task HandleRequestCommand(SocketSlashCommand command, Eventer eventer)
         {
             var options = command.Data.Options.ToArray();
             var EventID = (string)options[0];
@@ -159,14 +241,14 @@ namespace Freya.Handler
                 await command.FollowupAsync(embed: new CustomEmbedBuilder()
                 {
                     Description = $@"| Запрос успешно отправлен"
-                }.Build(), ephemeral: true);
+                }.Build(), ephemeral: false);
                 var msg = await (Client.GetMainGuild().GetChannel(StaticVars.RequestsChannel) as SocketTextChannel)
                     .SendMessageAsync(
                     embed: new CustomEmbedBuilder()
                     {
                         Title = "Поступил запрос",
-                        Description = $@">**От: <@{eventer.UserID}>**
-                                   >**количество: {Request.Amount}** :Egold: "
+                        Description = $@"> **От: <@{eventer.UserID}>**
+                                         > **Количество: {Request.Amount}** <:Egold:802323778134081556> "
                     }.Build(), component: ConfirmRequest.Build());
                 Request.MessageID = msg.Id;
             }
@@ -243,7 +325,7 @@ namespace Freya.Handler
                 }
             };
 
-            await command.FollowupAsync(embed: EventerProfile.Build(), ephemeral: true);
+            await command.FollowupAsync(embed: EventerProfile.Build(), ephemeral: false);
         }
         /// <summary>
         /// Format seconds to get a date
@@ -267,7 +349,7 @@ namespace Freya.Handler
             var eventer = await Eventer.FindOne(x => x.Warns.Any(x => x.ID.ToString() == WarnID));
             if (eventer is null)
             {
-                await SendError(command, "Не существует такого иди");
+                await SendError(command, "Не существует такого ид");
                 return;
             }
 
@@ -284,14 +366,13 @@ namespace Freya.Handler
                 Color = Color.Green,
                 Timestamp = System.DateTime.Now,
             };
-            await command.FollowupAsync(embed: success.Build(), ephemeral: true);
+            await command.FollowupAsync(embed: success.Build(), ephemeral: false);
         }
         /// <summary>
         /// Warn an eventer
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-
         private static async Task HandleWarnCommand(SocketSlashCommand command)
         {
             var options = command.Data.Options.ToArray();
@@ -306,7 +387,7 @@ namespace Freya.Handler
                     Color = Color.Red,
                     Timestamp = DateTime.Now,
                 };
-                await command.FollowupAsync(embed: error.Build(), ephemeral: true);
+                await command.FollowupAsync(embed: error.Build(), ephemeral: false);
             }
 
             eventer.Warns.Add(new()
@@ -346,7 +427,7 @@ namespace Freya.Handler
                         }
                     }
                 }.Build());
-                await command.FollowupAsync(embed: success.Build(), ephemeral: true);
+                await command.FollowupAsync(embed: success.Build(), ephemeral: false);
             }
             finally
             {
@@ -364,7 +445,7 @@ namespace Freya.Handler
                 Color = Color.Red,
                 Timestamp = DateTime.Now,
             };
-            return command.FollowupAsync(embed: error.Build(), ephemeral: true);
+            return command.FollowupAsync(embed: error.Build(), ephemeral: false);
         }
         /// <summary>
         /// Report for an event
@@ -372,7 +453,7 @@ namespace Freya.Handler
         /// <param name="command"></param>
         /// <param name="eventer"></param>
         /// <returns></returns>
-        private async Task HandleReportCommand(SocketSlashCommand command, Eventer eventer)
+        private static async Task HandleReportCommand(SocketSlashCommand command, Eventer eventer)
         {
             var options = command.Data.Options.ToArray();
             var EventID = options[0].Value.ToString();
@@ -415,11 +496,12 @@ namespace Freya.Handler
                                     <:sound:841952512336068609>**Участвовало людей:** `[{EndedEvent.EventReport.UsersCount}]`
                                     <a:circle:847956594725486624>**Категория:** `[{category.Category}]`
                                     <a:circle:847956594725486624>**Ивент:** `[{EventName.Name}]`
+                                    <a:circle:847956594725486624>**Количество кругов:** `[{EndedEvent.EventReport.RoundsCount}]`
                                     <a:circle:847956594725486624>**Вознаграждение:** `[{Request?.Amount.ToString() ?? "0"}]`<:Egold:802323778134081556>
                                     <a:circle:847956594725486624>**Гильдии | Пары:** `[{EndedEvent.EventReport.GuildMembersPresent}]`",
                     Timestamp = DateTime.Now,
                 }.Build());
-                await command.FollowupAsync(embed: SuccessEmbed.Build(), ephemeral: true);
+                await command.FollowupAsync(embed: SuccessEmbed.Build(), ephemeral: false);
             }
             catch
             {

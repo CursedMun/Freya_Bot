@@ -1,7 +1,6 @@
 ﻿using Discord.Commands;
 
 using Freya.Helpers.Precondition;
-using Freya.Infrastructure.Mongo;
 
 using MongoDB.Bson;
 
@@ -22,7 +21,7 @@ namespace Freya.Modules
         }
         [Command("start", RunMode = RunMode.Async)]
         [Summary("Запустить Ивент")]
-        [RequireRole(RolesType.EventMod | RolesType.MaxPerms, ErrorMessage = "test")]
+        [RequireRole(RolesType.EventMod | RolesType.MaxPerms | RolesType.Ogma, ErrorMessage = "test")]
         [RequireContext(ContextType.Guild)]
         public async Task StartEvent()
         {
@@ -30,26 +29,19 @@ namespace Freya.Modules
 
         }
         [Command("test", RunMode = RunMode.Async)]
-        [RequireRole(RolesType.EventMod | RolesType.MaxPerms, ErrorMessage = "test")]
+        [RequireRole(RolesType.Ogma, ErrorMessage = "test")]
         [RequireContext(ContextType.Guild)]
-        public async Task Test()
+        public async Task Test(int amount)
         {
 
-            var maindb = MongoContext.MongoClient.GetDatabase("ethereal_main");
-            var Filter = Builders<BsonDocument>.Filter.Empty;
-            var Update = Builders<BsonDocument>.Update.Inc("gold", 100);
+            //var maindb = MongoContext.MongoClient.GetDatabase("ethereal_main");
+            var Filter = Builders<BsonDocument>.Filter.Eq("userID", Context.User.Id.ToString());
+            var Update = Builders<BsonDocument>.Update.Inc("gold", amount);
             try
             {
                 var uri = "mongodb://localhost:27017";
                 var client = new MongoClient(uri);
-                var user = client.GetDatabase("ethereal_main").GetCollection<BsonDocument>("users").Find(Filter);
-                var ss = user.FirstOrDefault();
-                var users = await user.ToListAsync();
-                foreach (var item in users)
-                {
-                    System.Console.WriteLine(item);
-                }
-
+                var user = await client.GetDatabase("ethereal_main").GetCollection<BsonDocument>("users").UpdateOneAsync(Filter, Update);
             }
             catch (System.Exception ex)
             {
@@ -57,12 +49,6 @@ namespace Freya.Modules
                 throw;
             }
             //user.UpdateOneAsync(Filter, Update);
-
-        }
-        public class test
-        {
-            public string userID { get; set; }
-            public int gold { get; set; }
         }
     }
 }

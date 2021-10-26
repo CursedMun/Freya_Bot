@@ -1,7 +1,6 @@
 ﻿using Discord.WebSocket;
 
 using Freya.Infrastructure.Collections;
-using Freya.Infrastructure.Mongo;
 using Freya.Services;
 
 using MongoDB.Bson;
@@ -21,7 +20,7 @@ namespace Freya.Handler
     public class RequestsHandler : DiscordHandler
     {
         private DiscordSocketClient Client;
-        private readonly ulong[] RolesAdmin = TypeRoles.GetValueOrDefault((int)RolesType.MaxPerms);
+        private readonly ulong[] RolesAdmin = TypeRoles.GetValueOrDefault((int)RolesType.MaxPerms).PushArray(TypeRoles.GetValueOrDefault((int)RolesType.Ogma));
         public static Dictionary<ObjectId, CoinsRequest> Requests { get; set; } = new();
         public async override void Initialize(DiscordSocketClient client)
         {
@@ -80,10 +79,9 @@ namespace Freya.Handler
                 if (!user.Roles.Any(r => RolesAdmin.Any(s => r.Id == s))) return;
                 Request.Accepted = false;
                 Request.Active = false;
-                await Component.Message.ModifyAsync(x => x.Components = null);
+                await Component.Message.ModifyAsync(x => { x.Content = $"Отклонил <@{Component.User.Id}>"; x.Components = null; });
                 await Request.Save();
-                await Component.Respond("Выдал");
-
+                await Component.Respond("Не выдал");
             }
         }
 
@@ -96,18 +94,23 @@ namespace Freya.Handler
                 Request.Accepted = true;
                 Request.Active = false;
                 //TODO FIX IT SO IT CAN AWARD USER's
+                var Filter = Builders<BsonDocument>.Filter.Eq("userID", Request.UserID.ToString());
+                var Update = Builders<BsonDocument>.Update.Inc("gold", Request.Amount);
                 try
                 {
-                    var maindb = MongoContext.MongoClient.GetDatabase("ethereal_main");
-                    var Filter = Builders<BsonDocument>.Filter.Eq("userID", Request.UserID);
-                    var Update = Builders<BsonDocument>.Update.Inc("gold", Request.Amount);
-                    await maindb.GetCollection<BsonDocument>("users").UpdateOneAsync(Filter, Update);
+                    var uri = "mongodb://localhost:27017";
+                    var client = new MongoClient(uri);
+                    await client.GetDatabase("ethereal_main").GetCollection<BsonDocument>("users").UpdateOneAsync(Filter, Update);
                 }
                 catch (Exception ex)
                 {
-                    await Component.Message.Channel.SendErrorMessage(ex);
+                    Console.WriteLine(ex);
                 }
-                await Component.Message.ModifyAsync(x => x.Components = null);
+                await Component.Message.ModifyAsync(x =>
+                {
+                    x.Components = null;
+                    x.Content = $"Принял <@{Component.User.Id}>";
+                });
                 await Request.Save();
                 await Component.Respond("Выдал");
             }

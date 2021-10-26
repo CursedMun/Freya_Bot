@@ -18,7 +18,7 @@ namespace Freya.Infrastructure.Mongo
         public MongoContext(IMongoClient mongo)
         {
             MongoClient = mongo;
-            MongoDatabase = mongo.GetDatabase("ethereal_freya");
+            MongoDatabase = mongo.GetDatabase("Ethereal");
         }
         public MongoContext()
         {

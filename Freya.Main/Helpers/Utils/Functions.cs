@@ -6,6 +6,8 @@ using Discord.WebSocket;
 using Freya.Helpers.Util;
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 public static class Functions
@@ -20,6 +22,22 @@ public static class Functions
         {
             return null;
         }
+    }
+    public static ComponentBuilder ToComponentBuilder(this IReadOnlyCollection<IMessageComponent> components)
+    {
+        if (components.Count == 0) return null;
+
+        var builder = new ComponentBuilder
+        {
+            ActionRows = new()
+            {
+                new ActionRowBuilder()
+                {
+                    Components = components.ToList()
+                }
+            }
+        };
+        return builder;
     }
     public static SocketGuild GetMainGuild(this DiscordSocketClient Client)
     {

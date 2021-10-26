@@ -1,6 +1,6 @@
-﻿using System;
+﻿using MongoDB.Bson;
 
-using MongoDB.Bson;
+using System;
 
 namespace Freya.Infrastructure.Mongo
 {
@@ -26,7 +26,6 @@ namespace Freya.Infrastructure.Mongo
             {
                 get
                 {
-
                     return EndDate != DateTime.MinValue && (EndDate - DateTime.Now).TotalSeconds >= 0;
                 }
             }
@@ -37,6 +36,7 @@ namespace Freya.Infrastructure.Mongo
             public ObjectId EventCategoryID { get; set; }
             public string EventTypeID { get; set; }
             public IEventChannels Channels { get; set; }
+            public IEventMessages Messages { get; set; }
             public ITime Time { get; set; }
             public IEventReport EventReport { get; set; }
             public bool Finished { get; set; } = false;
@@ -48,6 +48,10 @@ namespace Freya.Infrastructure.Mongo
                 public int UsersCount { get; set; }
                 public bool GuildMembersPresent { get; set; }
 
+            }
+            public class IEventMessages
+            {
+                public ulong ManageMessageID { get; set; }
             }
             public class IEventChannels
             {
@@ -61,7 +65,7 @@ namespace Freya.Infrastructure.Mongo
                 public DateTime StartTime { get; set; }
                 public DateTime EndTime { get; set; }
                 public DateTime CreatedAT { get; set; }
-                public double CountDiff => EndTime.Subtract(StartTime).TotalSeconds;
+                public double CountDiff => StartTime == DateTime.MinValue || EndTime == DateTime.MinValue ? 0 : EndTime.Subtract(StartTime).TotalSeconds;
             }
         }
     }

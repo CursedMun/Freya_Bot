@@ -21,6 +21,7 @@ namespace Freya.Helpers.Handler
     class EventHandler : DiscordHandler
     {
         private DiscordSocketClient Client;
+        private readonly ulong[] RolesAdmin = TypeRoles.GetValueOrDefault((int)RolesType.MaxPerms).PushArray(TypeRoles.GetValueOrDefault((int)RolesType.Ogma));
 
         public override void Initialize(DiscordSocketClient client)
         {
@@ -33,26 +34,34 @@ namespace Freya.Helpers.Handler
         {
             if (arg is not SocketMessageComponent component)
                 return;
-            var eventer = await Eventer.FindOne(x => x.UserID == component.User.Id);
+            var eventID = component.Data.CustomId.Split("-")[1];
+            var eventer = await Eventer.FindOne(x => x.UserID == component.User.Id && x.Events.FindIndex(x => x.ID == eventID) > -1);
+            if (eventer is null && (component.User as SocketGuildUser).Roles.Any(r => RolesAdmin.Any(s => r.Id == s)))
+            {
+                eventer = await Eventer.FindOne(x => x.Events.FindIndex(x => x.ID == eventID) > -1);
+            };
             if (eventer is null)
             {
                 return;
             }
-            await component.AcknowledgeAsync();
+
+            await component.DeferAsync();
             switch (component.Data.CustomId)
             {
                 case string a when a.Contains("Start"):
-                    {
-                        var eventID = component.Data.CustomId.Split("-")[1];
-                        await StartEvent(component, eventID, eventer);
-                        break;
-                    }
+                    await StartEvent(component, eventID, eventer);
+                    break;
+
                 case string a when a.Contains("SendNews"):
-                    {
-                        var eventID = component.Data.CustomId.Split("-")[1];
-                        await SendNews(component, eventID, eventer);
-                        break;
-                    }
+                    await SendNews(component, eventID, eventer);
+                    break;
+
+                case string a when a.Contains("CloseChat"):
+                    await CloseChat(component, eventID, eventer);
+                    break;
+                case string a when a.Contains("CloseVoice"):
+                    await CloseVoice(component, eventID, eventer);
+                    break;
                 case string a when a.Contains("ChooseCategory"):
                     {
                         if (component.Data.Values is null || component.Data.Values.Count < 0) break;
@@ -81,6 +90,32 @@ namespace Freya.Helpers.Handler
                     break;
             }
         }
+
+        private async Task CloseVoice(SocketMessageComponent component, string eventID, Eventer eventer)
+        {
+            var EventGoing = eventer.Events.FirstOrDefault(x => x.ID == eventID);
+            if (EventGoing is null) return;
+            var MainGuild = Client.GetMainGuild();
+            var VoiceChannel = MainGuild.GetChannel(EventGoing.Channels.VoiceChannelID);
+            var Perms = VoiceChannel.GetPermissionOverwrite(MainGuild.EveryoneRole);
+            await VoiceChannel.AddPermissionOverwriteAsync(MainGuild.EveryoneRole,
+                new OverwritePermissions(
+                    connect: Perms is not null && Perms.Value.Connect == PermValue.Deny ? PermValue.Allow : PermValue.Deny));
+            await component.Respond($"Вы успешно {(Perms is not null && Perms.Value.Connect == PermValue.Deny ? "открыли" : "закрыли")} доступ в канал для открытия доступа нажмите ещё раз");
+        }
+
+        private async Task CloseChat(SocketMessageComponent component, string eventID, Eventer eventer)
+        {
+            var EventGoing = eventer.Events.FirstOrDefault(x => x.ID == eventID);
+            if (EventGoing is null) return;
+            var MainGuild = Client.GetMainGuild();
+            var TextChannel = MainGuild.GetChannel(EventGoing.Channels.TextChannelID);
+            var Perms = TextChannel.GetPermissionOverwrite(MainGuild.EveryoneRole);
+            await TextChannel.AddPermissionOverwriteAsync(MainGuild.EveryoneRole,
+                new OverwritePermissions(sendMessages: Perms is not null && Perms.Value.SendMessages == PermValue.Deny ? PermValue.Allow : PermValue.Deny));
+            await component.Respond($"Вы успешно {(Perms is not null && Perms.Value.Connect == PermValue.Deny ? "открыли" : "закрыли")} доступ в чат для открытия доступа нажмите ещё раз");
+        }
+
         private async Task StartEvent(SocketMessageComponent component, string eventID, Eventer eventer)
         {
             var EventGoing = eventer.Events.FirstOrDefault(x => x.ID == eventID);
@@ -98,7 +133,7 @@ namespace Freya.Helpers.Handler
                     {
                         new(StaticVars.EventBan,PermissionTarget.Role,new(addReactions: PermValue.Deny,sendMessages:PermValue.Deny)),
                         new(StaticVars.ChatMute,PermissionTarget.Role,new(addReactions: PermValue.Deny,sendMessages:PermValue.Deny)),
-                        new(StaticVars.PhoenixRole,PermissionTarget.Role,new(PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow)),
+                        new(StaticVars.PhoenixRole,PermissionTarget.Role,new(PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Deny,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Allow,PermValue.Deny,PermValue.Allow,PermValue.Allow,PermValue.Allow)),
                         new(Client.GetMainGuild().EveryoneRole.Id,PermissionTarget.Role,new(mentionEveryone:PermValue.Deny)),
                     };
                 });
@@ -108,6 +143,8 @@ namespace Freya.Helpers.Handler
                     x.PermissionOverwrites = new List<Overwrite>()
                     {
                         new(component.User.Id,PermissionTarget.User, new(viewChannel: PermValue.Allow, readMessageHistory: PermValue.Allow)),
+                        new(StaticVars.NotVerified,PermissionTarget.Role, new(viewChannel: PermValue.Deny, readMessageHistory: PermValue.Deny)),
+                        new(StaticVars.SecondWarn,PermissionTarget.Role, new(viewChannel: PermValue.Deny, readMessageHistory: PermValue.Deny)),
                         new(Client.GetMainGuild().EveryoneRole.Id,PermissionTarget.Role, new(viewChannel: PermValue.Deny, readMessageHistory: PermValue.Deny)),
                     };
                 });
@@ -125,12 +162,24 @@ namespace Freya.Helpers.Handler
                 EventGoing.Channels.TextChannelID = TextEvent.Id;
                 EventGoing.Channels.SettingsChannelID = TextManageEvent.Id;
 
-                var FinishEvent = new ComponentBuilder()
+                var ManageEvent = new ComponentBuilder()
                 .WithButton(new ButtonBuilder()
                 {
                     CustomId = $"SendNews-{eventID}",
-                    Style = ButtonStyle.Success,
+                    Style = ButtonStyle.Primary,
                     Label = "Отправить Анонс?"
+                })
+                .WithButton(new ButtonBuilder()
+                {
+                    CustomId = $"CloseChat-{eventID}",
+                    Style = ButtonStyle.Secondary,
+                    Label = "Закрыть чат?",
+                })
+                .WithButton(new ButtonBuilder()
+                {
+                    CustomId = $"CloseVoice-{eventID}",
+                    Style = ButtonStyle.Secondary,
+                    Label = "Закрыть войс?"
                 })
                 .WithButton(new ButtonBuilder()
                 {
@@ -144,16 +193,24 @@ namespace Freya.Helpers.Handler
                     Title = $"Информация о столе",
                     ThumbnailUrl = component.User.GetAvatarUrl(),
                     ImageUrl = "https://cdn.discordapp.com/attachments/847851000815681536/868820301939638292/rY0VuT6.gif",
-                    Description = $"<:circle:855370914841231371>**Категория: {category.Category}**\n<:circle:855370914841231371>**Ивент: {EventName.Name}** \n<:circle:855370993433444383>**Время проведения: {EventGoing.Time.StartTime.ToString("M/d/yyyy HH:mm")} **\n<a:circle:847956594725486624>**Канал управления ─ <#{TextManageEvent.Id}>**\n<a:circle:847956594725486624>**Голосовой канал ─ <#{ChannelEvent.Id}>**\n<a:circle:847956594725486624>**Ивентер ─ <@{eventer.UserID}>**",
+                    Description = $"<:circle:855370914841231371>**Категория: {category.Category}**\n<:circle:855370914841231371>**Ивент: {EventName.Name}** \n<:circle:855370993433444383>**Время проведения: {EventGoing.Time.StartTime:M/d/yyyy HH:mm} **\n<a:circle:847956594725486624>**Канал управления ─ <#{TextManageEvent.Id}>**\n<a:circle:847956594725486624>**Голосовой канал ─ <#{ChannelEvent.Id}>**\n<a:circle:847956594725486624>**Ивентер ─ <@{eventer.UserID}>**",
                 };
                 await component.Message.DeleteAsync();
-                await TextManageEvent.SendMessageAsync(embed: EventEmbed.Build(), component: FinishEvent.Build());
+                var ManageMessage = await TextManageEvent.SendMessageAsync(embed: EventEmbed.Build(), component: ManageEvent.Build());
+                EventGoing.Messages.ManageMessageID = ManageMessage.Id;
+                var ChatLink = new ComponentBuilder()
+                .WithButton(new ButtonBuilder()
+                {
+                    Url = (await TextManageEvent.CreateInviteAsync()).ToString(),
+                    Style = ButtonStyle.Link,
+                    Label = "Перейти в чат управления"
+                });
                 CustomEmbedBuilder SuccessEmbed = new()
                 {
                     Description = $@"| Ивент успешно запущен
-                                     | Канал управления: <@{TextManageEvent.Id}>"
+                                     | Канал управления: <@{TextManageEvent.Id}>",
                 };
-                await component.FollowupAsync(embed: SuccessEmbed.Build(), ephemeral: true);
+                await component.FollowupAsync(embed: SuccessEmbed.Build(), component: ChatLink.Build(), ephemeral: true);
                 return;
             }
             catch (Exception ex)
@@ -334,7 +391,8 @@ namespace Freya.Helpers.Handler
         {
             var eventID = component.Data.CustomId.Split("-")[1];
             var EventGoing = eventer.Events.FirstOrDefault(x => x.ID == eventID);
-            if (EventGoing is null) return;
+
+            if (EventGoing is null && !(component.User as SocketGuildUser).Roles.Any(r => RolesAdmin.Any(s => r.Id == s))) return;
             CustomEmbedBuilder EndEmbed = new()
             {
                 Title = $"Отчётность!",
@@ -348,11 +406,30 @@ namespace Freya.Helpers.Handler
             };
             try
             {
+                await Client.GetMainGuild().GetChannel(EventGoing.Channels.TextChannelID).DeleteAsync();
+
+            }
+            catch
+            {
+            }
+            try
+            {
+                await Client.GetMainGuild().GetChannel(EventGoing.Channels.VoiceChannelID).DeleteAsync();
+            }
+            catch
+            {
+            }
+            try
+            {
+                await Client.GetMainGuild().GetChannel(EventGoing.Channels.SettingsChannelID).DeleteAsync();
+            }
+            catch
+            {
+            }
+            try
+            {
                 EventGoing.Time.EndTime = DateTime.Now;
                 EventGoing.Finished = true;
-                await Client.GetMainGuild().GetChannel(EventGoing.Channels.TextChannelID).DeleteAsync();
-                await Client.GetMainGuild().GetChannel(EventGoing.Channels.VoiceChannelID).DeleteAsync();
-                await Client.GetMainGuild().GetChannel(EventGoing.Channels.SettingsChannelID).DeleteAsync();
                 await component.User.SendMessageAsync(embed: EndEmbed.Build());
             }
             catch (Exception ex)
@@ -362,7 +439,6 @@ namespace Freya.Helpers.Handler
             finally
             {
                 await eventer.Save();
-
             }
 
         }

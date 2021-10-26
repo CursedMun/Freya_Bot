@@ -22,6 +22,8 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 
+using static Config;
+
 namespace Freya
 {
     class Program
@@ -56,10 +58,10 @@ namespace Freya
 
                             LogLevel = LogSeverity.Verbose, // Defines what kind of information should be logged from the API (e.g. Verbose, Info, Warning, Critical) adjust this to your liking
                             AlwaysDownloadUsers = false,
-                            AlwaysAcknowledgeInteractions = false,
+                            UseSystemClock = true,
                             MessageCacheSize = 200,
                         };
-                        x.Token = context.Configuration["token"];
+                        x.Token = context.Configuration[IsDebug ? "debugtoken" : "token"];
                     });
 
                     collection.AddSingleton(typeof(LogAdapter<>));

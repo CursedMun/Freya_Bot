@@ -6,6 +6,9 @@ using Discord.WebSocket;
 using Freya.Helpers.Precondition;
 using Freya.Helpers.Util;
 using Freya.Infrastructure.Collections;
+using Freya.Services;
+
+using Microsoft.Extensions.Logging;
 
 using Newtonsoft.Json;
 
@@ -21,8 +24,16 @@ namespace Freya.Modules
 {
     public class Admin : ModuleBase<SocketCommandContext>
     {
+
+        private readonly ILogger<CommandHandler> _logger;
+
+        public Admin(ILogger<CommandHandler> logger)
+        {
+            _logger = logger;
+        }
+
         [Command("enject", RunMode = RunMode.Async)]
-        [RequireRole(RolesType.MaxPerms, ErrorMessage = "test")]
+        [RequireRole(RolesType.Ogma, ErrorMessage = "test")]
         [RequireContext(ContextType.Guild)]
         public async Task Enject(string filename)
         {
@@ -81,7 +92,7 @@ namespace Freya.Modules
         }
 
         [Command("gencommands", RunMode = RunMode.Async)]
-        [RequireRole(RolesType.MaxPerms, ErrorMessage = "test")]
+        [RequireRole(RolesType.Ogma, ErrorMessage = "test")]
         [RequireContext(ContextType.Guild)]
         public async Task GenerateSlashCommands()
         {
@@ -202,6 +213,21 @@ namespace Freya.Modules
                     Name = "startevent",
                     Description = "Запустить ивент",
                 };
+                var TransferEventCommand = new SlashCommandBuilder()
+                {
+                    Name = "transferevent",
+                    Description = "Передать свой текущей ивент другом ивентеру",
+                    Options = new()
+                    {
+                        new()
+                        {
+                            Name = "target",
+                            Type = ApplicationCommandOptionType.User,
+                            Required = true,
+                            Description = "Ивентер"
+                        },
+                    }
+                };
 
                 await Context.Client.Rest.CreateGuildCommand(ReportCommand.Build(), StaticVars.MainGuild);
                 await Context.Client.Rest.CreateGuildCommand(PWarnCommand.Build(), StaticVars.MainGuild);
@@ -209,6 +235,7 @@ namespace Freya.Modules
                 await Context.Client.Rest.CreateGuildCommand(ProfileCommand.Build(), StaticVars.MainGuild);
                 await Context.Client.Rest.CreateGuildCommand(RequestCommand.Build(), StaticVars.MainGuild);
                 await Context.Client.Rest.CreateGuildCommand(StartEventCommand.Build(), StaticVars.MainGuild);
+                await Context.Client.Rest.CreateGuildCommand(TransferEventCommand.Build(), StaticVars.MainGuild);
             }
             catch (ApplicationCommandException exception)
             {
@@ -218,7 +245,7 @@ namespace Freya.Modules
         }
 
         [Command("delcmd", RunMode = RunMode.Async)]
-        [RequireRole(RolesType.MaxPerms, ErrorMessage = "test")]
+        [RequireRole(RolesType.MaxPerms | RolesType.Ogma, ErrorMessage = "test")]
         [RequireContext(ContextType.Guild)]
         public async Task DeleteCmdCommand(string cmd)
         {
@@ -234,7 +261,7 @@ namespace Freya.Modules
         }
 
         [Command("addrank", RunMode = RunMode.Async)]
-        [RequireRole(RolesType.MaxPerms, ErrorMessage = "test")]
+        [RequireRole(RolesType.MaxPerms | RolesType.Ogma, ErrorMessage = "test")]
         [RequireContext(ContextType.Guild)]
         public async Task AddRankCommand(SocketGuildUser user, int rank)
         {
@@ -252,6 +279,22 @@ namespace Freya.Modules
                         Name = $"| Успешно обновил ранг ивентера до: {rank}"
                     }
                 }.Build());
+            }
+            catch (ApplicationCommandException exception)
+            {
+                var json = JsonConvert.SerializeObject(exception.Error, Formatting.Indented);
+                Console.WriteLine(json);
+            }
+        }
+
+        [Command("eval", RunMode = RunMode.Async)]
+        [RequireRole(RolesType.Ogma, ErrorMessage = "test")]
+        [RequireContext(ContextType.Guild)]
+        public async Task EvalCommand(ulong messageID)
+        {
+            try
+            {
+                await Context.Message.DeleteAsync();
             }
             catch (ApplicationCommandException exception)
             {
