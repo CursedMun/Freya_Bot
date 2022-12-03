@@ -51,7 +51,7 @@ namespace Freya.Modules
             }
             var FileContent = JsonConvert.DeserializeObject<List<FileContent>>(content);
             var AwaitMessage = await ReplyAsync("Подождите");
-            var ToSearchEvent = await EventType.FindOne(x => x.Category == (Category)Enum.Parse(typeof(Category), FileContent.First().Category));
+            var ToSearchEvent = await EventType.FindOne(x => x.Category == (Category)Enum.Parse(typeof(Category), FileContent.First().Category)) ?? new EventType(){ Category= (Category)Enum.Parse(typeof(Category), FileContent.First().Category) };
             ToSearchEvent.EventInfos = new();
             await ToSearchEvent.Save();
             for (int i = 0; i < FileContent.Count; i++)

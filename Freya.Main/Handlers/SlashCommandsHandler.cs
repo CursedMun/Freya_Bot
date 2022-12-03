@@ -270,7 +270,7 @@ namespace Freya.Handler
         private static async Task HandleProfileCommand(SocketSlashCommand command)
         {
             var options = command.Data.Options?.ToArray();
-            var User = options != null ? (SocketGuildUser)options[0].Value : command.User;
+            var User = options.Length > 0 ? (SocketGuildUser)options[0].Value : command.User;
             var eventer = await Eventer.GetOrCreate(User.Id);
             if (eventer.RoleGivenAt == DateTime.MinValue)
             {

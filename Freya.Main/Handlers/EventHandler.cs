@@ -35,7 +35,11 @@ namespace Freya.Helpers.Handler
             if (arg is not SocketMessageComponent component)
                 return;
             var eventID = component.Data.CustomId.Split("-")[1];
-            var eventer = await Eventer.FindOne(x => x.UserID == component.User.Id && x.Events.FindIndex(x => x.ID == eventID) > -1);
+            var eventer = await Eventer.FindOne(x => x.UserID == component.User.Id);
+            if(eventer.Events.FindIndex(x => x.ID == eventID) < -1)
+            {
+                return;
+            }
             if (eventer is null && (component.User as SocketGuildUser).Roles.Any(r => RolesAdmin.Any(s => r.Id == s)))
             {
                 eventer = await Eventer.FindOne(x => x.Events.FindIndex(x => x.ID == eventID) > -1);
@@ -113,7 +117,7 @@ namespace Freya.Helpers.Handler
             var Perms = TextChannel.GetPermissionOverwrite(MainGuild.EveryoneRole);
             await TextChannel.AddPermissionOverwriteAsync(MainGuild.EveryoneRole,
                 new OverwritePermissions(sendMessages: Perms is not null && Perms.Value.SendMessages == PermValue.Deny ? PermValue.Allow : PermValue.Deny));
-            await component.Respond($"Вы успешно {(Perms is not null && Perms.Value.Connect == PermValue.Deny ? "открыли" : "закрыли")} доступ в чат для открытия доступа нажмите ещё раз");
+            await component.Respond($"Вы успешно {(Perms is not null && Perms.Value.SendMessages == PermValue.Deny ? "открыли" : "закрыли")} доступ в чат для открытия доступа нажмите ещё раз");
         }
 
         private async Task StartEvent(SocketMessageComponent component, string eventID, Eventer eventer)

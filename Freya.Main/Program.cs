@@ -30,8 +30,6 @@ namespace Freya
     {
         static async Task Main()
         {
-            var smth = Directory.GetCurrentDirectory();
-
             var builder = new HostBuilder()
                 .ConfigureAppConfiguration(x =>
                 {
