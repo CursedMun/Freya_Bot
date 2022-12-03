@@ -5,16 +5,16 @@ using System.Diagnostics;
 public static class Config
 {
     private static ulong[] eventModRoles =
-   {
-            896871427410649140
+    {
+            1047999116287950928
     };
     private static ulong[] maxPermsRoles =
     {
-            896871427410649140//admin
+            1047999054812041266//admin
     };
     private static ulong[] OgmaRoles =
     {
-            896871427410649140//admin
+            1047999054812041266//admin
     };
     //private static ulong[] eventModRoles =
     //{
@@ -82,20 +82,20 @@ public static class Config
     //}
     public static class StaticVars
     {
-        public const ulong MainGuild = 882109412519591958;
-        public const ulong AdminGuild = 882109412519591958;
+        public const ulong MainGuild = 945817594835898409;
+        public const ulong AdminGuild = 945817594835898409;
 
         //Channels
 
-        public const ulong EventChannelsCategory = 900054757903851540;
-        public const ulong EventReportsChannel = 900054800530563072;
+        public const ulong EventChannelsCategory = 1047993562681315338;
+        public const ulong EventReportsChannel = 1047997688102277130;
 
-        public const ulong RequestsChannel = 900054800530563072;
+        public const ulong RequestsChannel = 1047997688102277130;
 
-        public const ulong VacationChannel = 900054800530563072;
+        public const ulong VacationChannel = 1047997688102277130;
 
-        public const ulong NewsChannel = 900054800530563072;
-        public const ulong WarnReportsChannel = 900054800530563072;
+        public const ulong NewsChannel = 1047997688102277130;
+        public const ulong WarnReportsChannel = 1047997688102277130;
         //Emoji
         public static class Emoji
         {
@@ -104,13 +104,13 @@ public static class Config
         }
 
         //role phoenix
-        public const ulong PhoenixRole = 888210172378497115;
+        public const ulong PhoenixRole = 1047999247787761664;
         //Bad Roles
-        public const ulong NotVerified = 896161540850458664;
-        public const ulong SecondWarn = 896161540850458664;
-        public const ulong EventBan = 896161540850458664;
-        public const ulong ChatMute = 896161540850458664;
-        public const ulong Mute = 896161540850458664;
+        public const ulong NotVerified = 1048000130894282792;
+        public const ulong SecondWarn = 1047999981421854741;
+        public const ulong EventBan = 1047999981421854741;
+        public const ulong ChatMute = 1047999981421854741;
+        public const ulong Mute = 1047999981421854741;
         //Orion
     }
     public class EventCategory
