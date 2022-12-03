@@ -30,6 +30,8 @@ namespace Freya
     {
         static async Task Main()
         {
+            var smth = Directory.GetCurrentDirectory();
+
             var builder = new HostBuilder()
                 .ConfigureAppConfiguration(x =>
                 {
@@ -46,7 +48,6 @@ namespace Freya
                     x.AddConsole();
                     x.SetMinimumLevel(LogLevel.Debug); // Defines what kind of information should be logged (e.g. Debug, Information, Warning, Critical) adjust this to your liking
                 })
-                //Client
                 .ConfigureServices((context, collection) =>
                 {
                     collection.AddOptions<DiscordSocketConfig>();
